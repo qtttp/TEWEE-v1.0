@@ -7,60 +7,136 @@ Y = "\033[1;33m"
 C = "\033[1;36m"
 W = "\033[0m"
 
-def executar_vulns(alvo, output=None):
-    print(f"\n{C}[*] Verificando vulnerabilidades em: {alvo}{W}\n")
-    resultados = []
-    dominio = alvo.replace("https://", "").replace("http://", "").split("/")[0]
+HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-    # 1. Verifica headers de segurança
-    try:
-        r = requests.get(f"http://{dominio}", timeout=5)
-        headers_seg = {
-            "X-Frame-Options": "Proteção contra Clickjacking",
-            "X-XSS-Protection": "Proteção XSS",
-            "X-Content-Type-Options": "Proteção MIME sniffing",
-            "Strict-Transport-Security": "HSTS (força HTTPS)",
-            "Content-Security-Policy": "CSP ativo",
-            "Referrer-Policy": "Política de Referrer",
-        }
-        print(f"{Y}[*] Headers de Segurança:{W}")
-        for h, desc in headers_seg.items():
-            if h in r.headers:
-                linha = f"{G}[✓] {h}:{W} {desc} — PRESENTE"
-            else:
-                linha = f"{R}[✗] {h}:{W} {desc} — AUSENTE"
-            print(linha)
-            resultados.append(linha)
-    except Exception as e:
-        print(f"{R}[-] Erro ao verificar headers: {e}{W}")
-
-    # 2. Verifica servidor exposto
-    try:
-        servidor = r.headers.get("Server", "Não exposto")
-        linha = f"\n{Y}[*] Servidor:{W} {servidor}"
-        print(linha)
-        resultados.append(linha)
-    except:
-        pass
-
-    # 3. Testa caminhos admin comuns
-    print(f"\n{Y}[*] Testando painéis admin:{W}")
-    caminhos = ["/admin", "/wp-admin", "/login", "/phpmyadmin", "/panel", "/dashboard"]
-    for caminho in caminhos:
+# ─────────────────────────────────────────
+def testar_sqli(url):
+    print(f"\n{C}[*] Testando SQL Injection:{W}")
+    payloads = ["'", "''", "`", "' OR '1'='1", "' OR 1=1--", "\" OR \"1\"=\"1"]
+    erros_sql = ["sql", "mysql", "syntax", "error", "warning", "ORA-", "PostgreSQL"]
+    encontrado = False
+    for payload in payloads:
         try:
-            resp = requests.get(f"http://{dominio}{caminho}", timeout=3)
-            if resp.status_code in [200, 301, 302]:
-                linha = f"{R}[!] Encontrado:{W} {dominio}{caminho} [{resp.status_code}]"
+            resp = requests.get(f"{url}?id={payload}", timeout=4,
+                headers=HEADERS)
+            for erro in erros_sql:
+                if erro.lower() in resp.text.lower():
+                    print(f"{R}[!] SQLi DETECTADO:{W} payload={payload} | erro={erro}")
+                    encontrado = True
+                    break
+        except:
+            pass
+    if not encontrado:
+        print(f"{G}[ok] Nenhuma vulnerabilidade SQLi obvia detectada{W}")
+
+# ─────────────────────────────────────────
+def testar_xss(url):
+    print(f"\n{C}[*] Testando XSS:{W}")
+    payloads = [
+        "<script>alert(1)</script>",
+        "<img src=x onerror=alert(1)>",
+        "'><script>alert(1)</script>",
+        "<svg onload=alert(1)>",
+    ]
+    encontrado = False
+    for payload in payloads:
+        try:
+            resp = requests.get(f"{url}?q={payload}", timeout=4,
+                headers=HEADERS)
+            if payload.lower() in resp.text.lower():
+                print(f"{R}[!] XSS REFLETIDO:{W} payload={payload[:40]}")
+                encontrado = True
+        except:
+            pass
+    if not encontrado:
+        print(f"{G}[ok] Nenhum XSS refletido detectado{W}")
+
+# ─────────────────────────────────────────
+def testar_arquivos_sensiveis(dominio):
+    print(f"\n{C}[*] Verificando arquivos sensiveis:{W}")
+    alvos = [
+        "/.env", "/.env.local", "/.env.backup",
+        "/config.php", "/config.yml", "/config.json",
+        "/wp-config.php", "/database.yml", "/settings.py",
+        "/backup.sql", "/backup.zip", "/dump.sql",
+        "/.git/config", "/.git/HEAD",
+        "/id_rsa", "/id_rsa.pub",
+        "/phpinfo.php", "/info.php", "/test.php",
+        "/server-status", "/server-info",
+        "/web.config", "/app.config",
+        "/composer.json", "/package.json",
+        "/readme.txt", "/CHANGELOG.md",
+    ]
+    encontrados = []
+    for caminho in alvos:
+        try:
+            resp = requests.get(f"http://{dominio}{caminho}",
+                timeout=3, headers=HEADERS, allow_redirects=False)
+            if resp.status_code == 200:
+                linha = f"{R}[!] EXPOSTO [{resp.status_code}]:{W} {dominio}{caminho}"
+                print(linha); encontrados.append(linha)
+            elif resp.status_code == 403:
+                linha = f"{Y}[~] Bloqueado [403]:{W} {dominio}{caminho}"
+                print(linha); encontrados.append(linha)
+        except:
+            pass
+    if not encontrados:
+        print(f"{G}[ok] Nenhum arquivo sensivel encontrado{W}")
+
+# ─────────────────────────────────────────
+def testar_metodos_http(dominio):
+    print(f"\n{C}[*] Testando metodos HTTP perigosos:{W}")
+    metodos = ["PUT", "DELETE", "TRACE", "CONNECT", "PATCH", "OPTIONS"]
+    for metodo in metodos:
+        try:
+            resp = requests.request(metodo, f"http://{dominio}/",
+                timeout=3, headers=HEADERS)
+            if resp.status_code not in [405, 501]:
+                print(f"{R}[!] Metodo {metodo} permitido:{W} [{resp.status_code}]")
             else:
-                linha = f"{G}[-]{W} {caminho} [{resp.status_code}]"
-            print(linha)
-            resultados.append(linha)
+                print(f"{G}[ok] {metodo}:{W} bloqueado [{resp.status_code}]")
         except:
             pass
 
+# ─────────────────────────────────────────
+def testar_headers_seguranca(dominio):
+    print(f"\n{C}[*] Headers de seguranca:{W}")
+    try:
+        r = requests.get(f"http://{dominio}", timeout=5, headers=HEADERS)
+        checks = {
+            "X-Frame-Options": "Protecao Clickjacking",
+            "X-XSS-Protection": "Protecao XSS",
+            "X-Content-Type-Options": "Protecao MIME",
+            "Strict-Transport-Security": "HSTS",
+            "Content-Security-Policy": "CSP",
+            "Referrer-Policy": "Referrer Policy",
+        }
+        for h, desc in checks.items():
+            if h in r.headers:
+                print(f"{G}[✓] {h}:{W} {desc} — PRESENTE")
+            else:
+                print(f"{R}[✗] {h}:{W} {desc} — AUSENTE")
+        servidor = r.headers.get("Server", "nao exposto")
+        print(f"{Y}[*] Servidor:{W} {servidor}")
+    except Exception as e:
+        print(f"{Y}[-] Erro: {e}{W}")
+
+# ─────────────────────────────────────────
+def executar_vulns(alvo, output=None):
+    print(f"\n{C}[*] Verificando vulnerabilidades em: {alvo}{W}")
+    resultados = []
+    dominio = alvo.replace("https://","").replace("http://","").split("/")[0]
+    url = f"http://{dominio}"
+
+    testar_headers_seguranca(dominio)
+    testar_sqli(url)
+    testar_xss(url)
+    testar_arquivos_sensiveis(dominio)
+    testar_metodos_http(dominio)
+
     if output:
         with open(output, "w") as f:
-            f.write("\n".join(resultados))
+            f.write(f"Vulns em {alvo}\n")
         print(f"\n{G}[+] Salvo em: {output}{W}")
 
-    print(f"\n{G}[✓] Verificação concluída.{W}\n")
+    print(f"\n{G}[✓] Verificacao concluida.{W}\n")

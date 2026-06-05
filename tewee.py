@@ -44,7 +44,7 @@ def main():
     parser.add_argument("--vulns", action="store_true",
         help="Busca vulnerabilidades no alvo")
     parser.add_argument("--auto", metavar="TAREFA",
-        choices=["update", "limpeza", "info"],
+        choices=["update", "limpeza", "info", "backup"],
         help="Automacoes: update / limpeza / info")
     parser.add_argument("--output", "-o", metavar="ARQUIVO",
         help="Salva resultado em arquivo .txt")
