@@ -6,7 +6,6 @@ import argparse
 import sys
 import os
 
-# Cores para terminal
 R = "\033[1;31m"
 G = "\033[1;32m"
 Y = "\033[1;33m"
@@ -23,7 +22,7 @@ BANNER = (
     " |_____|_____|   \\/  \\/   |_____|_____|\n"
     f"{W}\n"
     f"{C}The Eye that Wipes Everything and Everyone{W}\n"
-    f"{Y}          [ by: voce | v1.0 ]{W}\n"
+    f"{Y}          [ by: voce | v2.0 ]{W}\n"
 )
 
 def main():
@@ -36,6 +35,8 @@ def main():
 
     parser.add_argument("--alvo", "-a", metavar="ALVO",
         help="IP, dominio ou URL do alvo")
+    parser.add_argument("--ip", metavar="IP/DOMINIO",
+        help="Lookup de IP (use 'meu' para seu proprio IP)")
     parser.add_argument("--osint", action="store_true",
         help="Coleta informacoes OSINT do alvo")
     parser.add_argument("--scan", metavar="TIPO",
@@ -45,7 +46,7 @@ def main():
         help="Busca vulnerabilidades no alvo")
     parser.add_argument("--auto", metavar="TAREFA",
         choices=["update", "limpeza", "info", "backup"],
-        help="Automacoes: update / limpeza / info")
+        help="Automacoes: update / limpeza / info / backup")
     parser.add_argument("--output", "-o", metavar="ARQUIVO",
         help="Salva resultado em arquivo .txt")
 
@@ -53,8 +54,17 @@ def main():
 
     if len(sys.argv) == 1:
         parser.print_help()
-        print(f"\n{Y}Exemplo:{W} python3 tewee.py --alvo google.com --osint")
+        print(f"\n{Y}Exemplos:{W}")
+        print(f"  python3 tewee.py --ip meu")
+        print(f"  python3 tewee.py --ip google.com")
+        print(f"  python3 tewee.py --alvo google.com --osint")
+        print(f"  python3 tewee.py --alvo google.com --scan rapido")
+        print(f"  python3 tewee.py --alvo google.com --vulns")
         sys.exit(0)
+
+    if args.ip:
+        from core.iplookup import lookup_ip
+        lookup_ip(args.ip, args.output)
 
     if args.osint:
         if not args.alvo:
