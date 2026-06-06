@@ -228,3 +228,79 @@ def executar_investiga(alvo, output=None):
         with open(output, "w") as f:
             f.write(f"Investigacao: {alvo}\n")
         print(f"{G}[+] Salvo em: {output}{W}")
+
+# ─────────────────────────────────────────
+def investigar_telefone(numero):
+    secao(f"BUSCA POR TELEFONE: {numero}")
+
+    # Limpa o numero
+    num = re.sub(r'\D', '', numero)
+
+    # Identifica DDD
+    ddds = {
+        "11":"Sao Paulo/SP","12":"Sao Jose dos Campos/SP",
+        "13":"Santos/SP","14":"Bauru/SP","15":"Sorocaba/SP",
+        "16":"Ribeirao Preto/SP","17":"Sao Jose do Rio Preto/SP",
+        "18":"Presidente Prudente/SP","19":"Campinas/SP",
+        "21":"Rio de Janeiro/RJ","22":"Campos/RJ","24":"Volta Redonda/RJ",
+        "27":"Vitoria/ES","28":"Cachoeiro/ES",
+        "31":"Belo Horizonte/MG","32":"Juiz de Fora/MG",
+        "33":"Governador Valadares/MG","34":"Uberlandia/MG",
+        "35":"Varginha/MG","37":"Divinopolis/MG","38":"Montes Claros/MG",
+        "41":"Curitiba/PR","42":"Ponta Grossa/PR","43":"Londrina/PR",
+        "44":"Maringa/PR","45":"Foz do Iguacu/PR","46":"Francisco Beltrao/PR",
+        "47":"Joinville/SC","48":"Florianopolis/SC","49":"Chapeco/SC",
+        "51":"Porto Alegre/RS","53":"Pelotas/RS","54":"Caxias do Sul/RS",
+        "55":"Santa Maria/RS",
+        "61":"Brasilia/DF","62":"Goiania/GO","63":"Palmas/TO",
+        "64":"Rio Verde/GO","65":"Cuiaba/MT","66":"Rondonopolis/MT",
+        "67":"Campo Grande/MS","68":"Rio Branco/AC","69":"Porto Velho/RO",
+        "71":"Salvador/BA","73":"Ilheus/BA","74":"Juazeiro/BA",
+        "75":"Feira de Santana/BA","77":"Vitoria da Conquista/BA",
+        "79":"Aracaju/SE","81":"Recife/PE","82":"Maceio/AL",
+        "83":"Joao Pessoa/PB","84":"Natal/RN","85":"Fortaleza/CE",
+        "86":"Teresina/PI","87":"Caruaru/PE","88":"Juazeiro do Norte/CE",
+        "89":"Picos/PI","91":"Belem/PA","92":"Manaus/AM",
+        "93":"Santarem/PA","94":"Maraba/PA","95":"Boa Vista/RR",
+        "96":"Macapa/AP","97":"Coari/AM","98":"Sao Luis/MA","99":"Imperatriz/MA",
+    }
+
+    if len(num) >= 10:
+        ddd = num[:2]
+        resto = num[2:]
+        regiao = ddds.get(ddd, "Desconhecido")
+        linha("DDD", ddd)
+        linha("Regiao", regiao)
+        linha("Numero", f"({ddd}) {resto}")
+
+        # Tipo (fixo ou celular)
+        if len(resto) == 9 and resto[0] == "9":
+            linha("Tipo", "Celular")
+        elif len(resto) == 8:
+            linha("Tipo", "Fixo")
+        else:
+            linha("Tipo", "Indefinido")
+
+    # Busca no WhatsApp (verifica se tem conta)
+    print(f"\n{Y}[*] Links de verificacao:{W}")
+    print(f"{G}[+] WhatsApp:{W} https://wa.me/55{num}")
+    print(f"{G}[+] Telegram:{W} https://t.me/+55{num}")
+
+    # Busca publica via TrueCaller-like
+    print(f"\n{Y}[*] Busca publica:{W}")
+    buscas = [
+        ("Google",    f"https://www.google.com/search?q=%2255{num}"),
+        ("NumeroInfo", f"https://www.numeroinfo.com.br/{num}"),
+        ("TelefoneSP", f"https://www.telefonesp.com.br/{num}"),
+    ]
+    for nome, url in buscas:
+        print(f"{G}[+] {nome}:{W} {url}")
+
+
+def executar_telefone(numero, output=None):
+    investigar_telefone(numero)
+    if output:
+        with open(output, "w") as f:
+            f.write(f"Telefone: {numero}\n")
+        print(f"\n{G}[+] Salvo em: {output}{W}")
+    print(f"\n{G}[✓] Busca finalizada.{W}\n")

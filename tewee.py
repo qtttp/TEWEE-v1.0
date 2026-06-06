@@ -38,6 +38,8 @@ def main():
         help="Lookup de IP (use 'meu' para seu proprio IP)")
     parser.add_argument("--osint", action="store_true",
         help="Coleta informacoes OSINT do alvo")
+    parser.add_argument("--tel", metavar="NUMERO",
+        help="Busca por numero de telefone")
     parser.add_argument("--investiga", metavar="DOMINIO",
         help="Investigacao completa: WHOIS, IP, headers, perfis, gateway")
     parser.add_argument("--scan", metavar="TIPO",
@@ -57,6 +59,7 @@ def main():
         parser.print_help()
         print(f"\n{Y}Exemplos:{W}")
         print(f"  tewee --investiga wkvault.com")
+        print(f"  tewee --tel 17710354801")
         print(f"  tewee --ip meu")
         print(f"  tewee --ip 8.8.8.8")
         print(f"  tewee --alvo google.com --osint")
@@ -67,6 +70,10 @@ def main():
     if args.ip:
         from core.iplookup import lookup_ip
         lookup_ip(args.ip, args.output)
+
+    if args.tel:
+        from core.investiga import executar_telefone
+        executar_telefone(args.tel, args.output)
 
     if args.investiga:
         from core.investiga import executar_investiga
