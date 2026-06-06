@@ -4,7 +4,6 @@
 
 import argparse
 import sys
-import os
 
 R = "\033[1;31m"
 G = "\033[1;32m"
@@ -22,7 +21,7 @@ BANNER = (
     " |_____|_____|   \\/  \\/   |_____|_____|\n"
     f"{W}\n"
     f"{C}The Eye that Wipes Everything and Everyone{W}\n"
-    f"{Y}          [ by: voce | v2.0 ]{W}\n"
+    f"{Y}          [ by: voce | v3.0 ]{W}\n"
 )
 
 def main():
@@ -39,6 +38,8 @@ def main():
         help="Lookup de IP (use 'meu' para seu proprio IP)")
     parser.add_argument("--osint", action="store_true",
         help="Coleta informacoes OSINT do alvo")
+    parser.add_argument("--investiga", metavar="DOMINIO",
+        help="Investigacao completa: WHOIS, IP, headers, perfis, gateway")
     parser.add_argument("--scan", metavar="TIPO",
         choices=["portas", "rapido", "completo"],
         help="Scanner de portas: portas / rapido / completo")
@@ -55,16 +56,21 @@ def main():
     if len(sys.argv) == 1:
         parser.print_help()
         print(f"\n{Y}Exemplos:{W}")
-        print(f"  python3 tewee.py --ip meu")
-        print(f"  python3 tewee.py --ip google.com")
-        print(f"  python3 tewee.py --alvo google.com --osint")
-        print(f"  python3 tewee.py --alvo google.com --scan rapido")
-        print(f"  python3 tewee.py --alvo google.com --vulns")
+        print(f"  tewee --investiga wkvault.com")
+        print(f"  tewee --ip meu")
+        print(f"  tewee --ip 8.8.8.8")
+        print(f"  tewee --alvo google.com --osint")
+        print(f"  tewee --alvo google.com --scan rapido")
+        print(f"  tewee --alvo google.com --vulns")
         sys.exit(0)
 
     if args.ip:
         from core.iplookup import lookup_ip
         lookup_ip(args.ip, args.output)
+
+    if args.investiga:
+        from core.investiga import executar_investiga
+        executar_investiga(args.investiga, args.output)
 
     if args.osint:
         if not args.alvo:
